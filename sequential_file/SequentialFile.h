@@ -11,6 +11,20 @@ private:
   string dataFileName;
   string auxFileName;
 
+  string record_to_text(Registro &record){
+    string text = ""; 
+    text += string(record.name);
+    text += ',';
+    text += string(record.NOC);
+    text += ',';
+    text += string(record.discipline);
+    text += ',';
+    text += string(record.event);
+    text += "\n";
+    return text;
+  }  
+
+
   void reBuild(){
       Registro record;
       fstream mainFile, auxFile, helperFile;
@@ -123,6 +137,60 @@ public:
     this->dataFileName = fileName + ".dat";
     this->auxFileName = auxName + ".dat";
   }
+
+  void search_to_csv(Registro &result){
+    Registro record;
+    fstream csvFile;
+    csvFile.open("search.csv",ios::out);
+    csvFile<<record_to_text(record);
+    csvFile.close();
+  }
+
+  void search_to_csv(vector<Registro> &results){
+    Registro record;
+    fstream csvFile;
+    csvFile.open("search.csv",ios::out);
+    for (auto it = begin(results); it!= end(results);it++){
+        csvFile<<record_to_text((*it));
+    }
+    csvFile.close();
+  }
+
+  void write_all_to_CSV(){
+    Registro record;
+    fstream mainFile, auxFile, csvFile;
+    mainFile.open(this->dataFileName, ios::in | ios::out | ios::binary);
+    auxFile.open(this->auxFileName, ios::in | ios::out| ios::binary);
+    csvFile.open("all.csv",ios::out);
+
+    int next = 1; 
+    mainFile.read((char*) &record, sizeof(record));
+    csvFile<<record_to_text(record);
+
+    auto tempNext = record.next;
+    auto tempFile = record.file;
+    while(tempNext != -1){
+      ++next;
+      if (tempFile == 'd'){
+        mainFile.seekg(tempNext * (sizeof(Registro) + 1));
+        mainFile.read((char*) &record, sizeof(record));
+        csvFile<<record_to_text(record);
+      }
+      else{
+        auxFile.seekg(tempNext * (sizeof(Registro) + 1));
+        auxFile.read((char*) &record, sizeof(record));
+        csvFile<<record_to_text(record);
+      }
+      tempNext = record.next;
+      tempFile = record.file;
+
+      record.next = next;
+
+  }
+  mainFile.close();
+  auxFile.close();
+  csvFile.close();
+}
 
   void insertAll(vector<Registro> registros){
     fstream file;
@@ -338,6 +406,7 @@ public:
       inFile.close();
 
       if (exists){
+        search_to_csv(record);
         return record;
       }
       else{
@@ -352,7 +421,10 @@ public:
             LinearSearch(auxFile,key,record,exists);
             auxFile.close();
 
-            if (exists) return record;
+            if (exists){
+              search_to_csv(record);
+              return record;
+            }
             else throw "El registro no existe";
 
           }
@@ -421,7 +493,7 @@ public:
       } else {
           cout<< "No se pudo abrir el archivo de datos";
       }
-      
+      search_to_csv(records);
       return records;
   }
   
